@@ -1,6 +1,7 @@
 //Bring in inquirer package
-
+const inquirer = require('inquirer');
 //bring in database connection
+const db = require("./config/connection");
 
 //use inquirer to build menu of task items
 
