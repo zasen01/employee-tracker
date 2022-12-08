@@ -10,7 +10,7 @@ function mainMenu() {
         type: 'list',
         name: 'task',
         message: 'What action would you like to take?',
-        choices: ['Add Department', 'Add Role', 'Add Employee', 'View Departments', 'View Roles', 'View Employees', 'Delete Employee', 'Exit']
+        choices: ['Add Department', 'Add Role', 'Add Employee','Update Employee', 'View Departments', 'View Roles', 'View Employees', 'Delete Employee', 'Exit']
     }).then(({ task }) => {
         if (task === 'Add Department') {
             addDepartment()
@@ -18,6 +18,8 @@ function mainMenu() {
             addRole()
         } else if (task === 'Add Employee') {
             addEmployee()
+        } else if (task === 'Update Employee') {
+            updateEmployee()
         } else if (task === 'View Departments') {
             viewDepartment()
         } else if (task === 'View Roles') {
@@ -141,7 +143,7 @@ const deleteEmployee = async() =>{
         choices:employeeArry
     }
     ).then(answer => {
-        db.promise().query('DELETE FROM employee WHERE id=?', answer.employee).then(([res])=>{
+        db.promise().query('DELETE FROM employee WHERE id=?', answer.employee).then(([data])=>{
             if (data.affectedRows > 0) {
                 viewEmployee();
             } else {
@@ -151,7 +153,37 @@ const deleteEmployee = async() =>{
         })
     })
 }
-
+const updateEmployee = async() =>{
+    const [employee] = await db.promise().query('SELECT * FROM employee');
+    const employeeArry = employee.map(({ id, first_name, last_name }) => (
+        { name: first_name + ' ' + last_name, value: id }
+    ));
+    const [roles] = await db.promise().query('SELECT * FROM role');
+    const roleArry = roles.map(({ id, title }) => (
+        { name: title, value: id }
+    ));
+    inquirer.prompt([{
+        type:'list',
+        name:'employee',
+        message:'Select employee to Update',
+        choices:employeeArry
+    },{
+        type:'list',
+        name:'role',
+        message:'Select New Role',
+        choices:roleArry
+    }]
+    ).then(answer => {
+        db.promise().query('UPDATE employee SET ? WHERE ?', [{role_id:answer.role},{id:answer.employee}]).then(([data])=>{
+            if (data.affectedRows > 0) {
+                viewEmployee();
+            } else {
+                console.info('Employee Deletion Failed');
+                mainMenu();
+            }
+        })
+    })
+}
 const viewDepartment = () => {
     db.promise().query('SELECT * FROM department').then(([data]) => {
         printTable(data);
