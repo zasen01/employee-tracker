@@ -3,13 +3,14 @@ const inquirer = require('inquirer');
 //bring in database connection
 const db = require("./config/connection");
 const { printTable } = require('console-table-printer');
+const { listenerCount } = require('./config/connection');
 //use inquirer to build menu of task items
 function mainMenu() {
     inquirer.prompt({
         type: 'list',
         name: 'task',
         message: 'What action would you like to take?',
-        choices: ['Add Department', 'Add Role', 'Add Employee', 'View Departments', 'View Roles', 'View Employees', 'Exit']
+        choices: ['Add Department', 'Add Role', 'Add Employee', 'View Departments', 'View Roles', 'View Employees', 'Delete Employee', 'Exit']
     }).then(({ task }) => {
         if (task === 'Add Department') {
             addDepartment()
@@ -23,6 +24,8 @@ function mainMenu() {
             viewRole()
         } else if (task === 'View Employees') {
             viewEmployee()
+        } else if (task === 'Delete Employee') {
+            deleteEmployee()
         } else { process.exit() }
     })
 }
@@ -115,10 +118,10 @@ const addEmployee = async () => {
     ]).then(({ first, last, manId, roleId }) => {
         var employeeObj = { first_name: first, last_name: last, role_id: roleId, manager_id: manId };
         console.log(employeeObj);
-        db.promise().query('INSERT INTO employee SET ?', employeeObj).then(([data])=>{
-            if(data.affectedRows>0){
+        db.promise().query('INSERT INTO employee SET ?', employeeObj).then(([data]) => {
+            if (data.affectedRows > 0) {
                 viewEmployee();
-            }else{
+            } else {
                 console.info('Employee Creation Failed');
                 mainMenu();
             }
@@ -126,6 +129,29 @@ const addEmployee = async () => {
     })
 
 }
+const deleteEmployee = async() =>{
+    const [employee] = await db.promise().query('SELECT * FROM employee');
+    const employeeArry = employee.map(({ id, first_name, last_name }) => (
+        { name: first_name + ' ' + last_name, value: id }
+    ));
+    inquirer.prompt({
+        type:'list',
+        name:'employee',
+        message:'Select employee to Delete',
+        choices:employeeArry
+    }
+    ).then(answer => {
+        db.promise().query('DELETE FROM employee WHERE id=?', answer.employee).then(([res])=>{
+            if (data.affectedRows > 0) {
+                viewEmployee();
+            } else {
+                console.info('Employee Deletion Failed');
+                mainMenu();
+            }
+        })
+    })
+}
+
 const viewDepartment = () => {
     db.promise().query('SELECT * FROM department').then(([data]) => {
         printTable(data);
@@ -133,13 +159,13 @@ const viewDepartment = () => {
     })
 }
 const viewRole = () => {
-    db.promise().query('SELECT * FROM role').then(([data]) => {
+    db.promise().query('SELECT role.title AS Role,role.salary AS Salary,department.dept_name AS Department FROM role LEFT JOIN department on role.dept_id = department.id').then(([data]) => {
         printTable(data);
         mainMenu();
     })
 }
 const viewEmployee = () => {
-    db.promise().query('SELECT * FROM employee').then(([data]) => {
+    db.promise().query('SELECT CONCAT (employee.first_name," ", employee.last_name) AS Name, role.title AS Title, role.salary AS Salary,department.dept_name AS Department FROM employee LEFT JOIN role on employee.role_id = role.id LEFT JOIN department on role.dept_id = department.id').then(([data]) => {
         printTable(data);
         mainMenu();
     })
